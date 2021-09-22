@@ -1,0 +1,7 @@
+- Added "import dotenv" and "dotenv.load_dotenv()" to app.py before app setup
+- Added logout route content to successfully logout user
+- Added logout form to base.html and routes related to users
+- Fixed the user profile to show location, bio and header image
+- Added route content and form to edit user information
+- Fixed home page to render Warbles from just users that logged in user follows
+- Fixed typo in index.html to include action route on form 

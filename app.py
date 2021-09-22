@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm, UserLogoutForm
+from forms import UserAddForm, LoginForm, MessageForm, UserLogoutForm, UpdateUserForm
 from models import db, connect_db, User, Message
 
 import dotenv
@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+# app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 toolbar = DebugToolbarExtension(app)
 
@@ -141,7 +141,7 @@ def list_users():
     else:
         users = User.query.filter(User.username.like(f"%{search}%")).all()
 
-    return render_template('users/index.html', users=users)
+    return render_template('users/index.html', users=users, form=UserLogoutForm())
 
 
 @app.get('/users/<int:user_id>')
@@ -150,7 +150,7 @@ def users_show(user_id):
 
     user = User.query.get_or_404(user_id)
 
-    return render_template('users/show.html', user=user)
+    return render_template('users/show.html', user=user, form=UserLogoutForm())
 
 
 @app.get('/users/<int:user_id>/following')
@@ -162,7 +162,7 @@ def show_following(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user)
+    return render_template('users/following.html', user=user, form=UserLogoutForm())
 
 
 @app.get('/users/<int:user_id>/followers')
@@ -174,7 +174,7 @@ def users_followers(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/followers.html', user=user)
+    return render_template('users/followers.html', user=user, form=UserLogoutForm())
 
 
 @app.post('/users/follow/<int:follow_id>')
@@ -211,7 +211,27 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
+    update_form = UpdateUserForm()
+
+    if update_form.validate_on_submit():
+        
+        user = User.authenticate(g.user.username,
+                                 update_form.password.data)
+        if user:
+            user.username = update_form.username.data
+            user.email=update_form.email.data
+            user.image_url=update_form.image_url.data or User.image_url.default.arg
+            user.header_image_url=update_form.header_image_url.data 
+            user.bio= update_form.bio.data
+
+            db.session.commit()
+            return redirect(f"/users/{g.user.id}")
+
+        flash("Invalid credentials to edit user")
+        return redirect("/")
+
+    return render_template("users/edit.html", update_form=update_form, form=UserLogoutForm())
+    
 
 
 @app.post('/users/delete')
@@ -253,7 +273,7 @@ def messages_add():
 
         return redirect(f"/users/{g.user.id}")
 
-    return render_template('messages/new.html', form=form)
+    return render_template('messages/new.html', message_form=form, form=UserLogoutForm())
 
 
 @app.get('/messages/<int:message_id>')
@@ -261,7 +281,7 @@ def messages_show(message_id):
     """Show a message."""
 
     msg = Message.query.get(message_id)
-    return render_template('messages/show.html', message=msg)
+    return render_template('messages/show.html', message=msg, form=UserLogoutForm())
 
 
 @app.post('/messages/<int:message_id>/delete')
@@ -292,15 +312,17 @@ def homepage():
     """
 
     if g.user:
+        following_ids = [user.id for user in g.user.following]
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
 
-        form = UserLogoutForm()
+        
 
-        return render_template('home.html', messages=messages, form=form)
+        return render_template('home.html', messages=messages, form=UserLogoutForm())
 
     else:
         return render_template('home-anon.html')
