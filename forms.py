@@ -23,3 +23,10 @@ class LoginForm(FlaskForm):
 
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[Length(min=6)])
+
+
+class OnlyCsrfForm(FlaskForm):
+    """Used to add CSRF protection to logout user"""
+
+
+UserLogoutForm = OnlyCsrfForm

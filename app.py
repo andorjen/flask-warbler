@@ -4,8 +4,11 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, UserLogoutForm
 from models import db, connect_db, User, Message
+
+import dotenv
+dotenv.load_dotenv()
 
 CURR_USER_KEY = "curr_user"
 
@@ -111,12 +114,18 @@ def login():
 def logout():
     """Handle logout of user."""
 
-    # IMPLEMENT THIS AND FIX BUG
-    # DO NOT CHANGE METHOD ON ROUTE
+    form = UserLogoutForm()
 
+    if form.validate_on_submit():
+        session.pop(CURR_USER_KEY, None)
+        flash('Successfully logged out!')
+        return redirect('/login')
+
+    return redirect('/')
 
 ##############################################################################
 # General user routes:
+
 
 @app.get('/users')
 def list_users():
@@ -289,7 +298,9 @@ def homepage():
                     .limit(100)
                     .all())
 
-        return render_template('home.html', messages=messages)
+        form = UserLogoutForm()
+
+        return render_template('home.html', messages=messages, form=form)
 
     else:
         return render_template('home-anon.html')
