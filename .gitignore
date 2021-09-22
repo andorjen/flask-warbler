@@ -1,0 +1,10 @@
+*~
+.*.sw[nop]
+.DS_Store
+.env
+__pycache__
+env/
+venv/
+node_modules/
+build/
+.vscode/
