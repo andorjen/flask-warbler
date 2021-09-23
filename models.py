@@ -79,7 +79,7 @@ class User(db.Model):
     liked_messages = db.relationship(
         'Message',
         secondary="liked_messages",
-        backref="liked_users",
+        backref="liked_users",  # users_liked
         order_by='LikedMessage.timestamp.desc()')
 
     followers = db.relationship(
@@ -184,8 +184,8 @@ class Message(db.Model):
 
 
 class LikedMessage(db.Model):
-    """An individual message ("warble")."""
-
+    """An individual liked message ("warble")."""
+    # could call this Like and likes
     __tablename__ = 'liked_messages'
 
     message_id = db.Column(

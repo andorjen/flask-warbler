@@ -26,11 +26,8 @@ class LoginForm(FlaskForm):
 
 
 class OnlyCsrfForm(FlaskForm):
-    """Used to add CSRF protection to logout user"""
+    """Used to add CSRF protection to forms"""
 
-
-class DeleteProfileForm(FlaskForm):
-    """Used to add CSRF protection to delete user"""
 
 
 class UpdateUserForm(FlaskForm):
@@ -44,9 +41,6 @@ class UpdateUserForm(FlaskForm):
     password = PasswordField('Password')
 
 
-class AddLikedMessageForm(FlaskForm):
-    """Form to add liked message"""
 
 
-class RemoveLikedMessageForm(FlaskForm):
-    """Form to remove liked message"""
+# make just one form

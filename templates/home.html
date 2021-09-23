@@ -46,26 +46,29 @@
     <ul class="list-group" id="messages">
       {% for msg in messages %}
       <li class="list-group-item">
-        <a href="/messages/{{ msg.id }}" class="message-link" />
+        <a href="/messages/{{ msg.id }}" class="message-link">
         <a href="/users/{{ msg.user.id }}">
           <img src="{{ msg.user.image_url }}" alt="" class="timeline-image">
         </a>
         <div class="message-area">
           <a href="/users/{{ msg.user.id }}">@{{ msg.user.username }}</a>
           <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
-          {% if msg.id in g.liked_message_ids %}
-          <form action="/messages/{{msg.id}}/remove" method="POST">
-            {{ g.add_liked_message_form.hidden_tag() }}
-            <button class='btn btn-light'><i class="fas fa-star"></i></button>
-          </form>
+          <div class="star"> 
+            {% if msg.user_id != g.user.id %}
+              {% if msg.id in g.liked_message_ids %}
+              <form action="/messages/{{msg.id}}/unlike" method="POST">
+                {{ g.csrf_form.hidden_tag() }}
+                <button class='btn btn-light'><i class="fas fa-star"></i></button>
+              </form>
 
-          {% else%}
-          <form action="/messages/{{msg.id}}/add" method="POST">
-            {{ g.remove_liked_message_form.hidden_tag() }}
-            <button class='btn btn-light'><i class="far fa-star"></i></button>
-          </form>
-
-          {% endif %}
+              {% else%}
+              <form action="/messages/{{msg.id}}/like" method="POST">
+                {{ g.csrf_form.hidden_tag() }}
+                <button class='btn btn-light'><i class="far fa-star"></i></button>
+              </form>
+              {% endif %}
+            {% endif %}
+          </div>
           <p>{{ msg.text }}</p>
         </div>
       </li>

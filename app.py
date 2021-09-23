@@ -2,10 +2,9 @@ import os
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
-from flask_wtf import form
 from sqlalchemy.exc import IntegrityError
 
-from forms import DeleteProfileForm, OnlyCsrfForm, UserAddForm, LoginForm, MessageForm, UpdateUserForm, AddLikedMessageForm, RemoveLikedMessageForm
+from forms import OnlyCsrfForm, UserAddForm, LoginForm, MessageForm, UpdateUserForm
 from models import db, connect_db, User, Message, LikedMessage
 
 import dotenv
@@ -43,17 +42,16 @@ def add_user_to_g():
 
 
 @app.before_request
-def add_csrf_form():
-    """If we're logged in, add curr user to Flask global."""
+def add_forms():
+    """Provide html with necessary forms via Flask global"""
 
     g.csrf_form = OnlyCsrfForm()
-    g.add_liked_message_form = AddLikedMessageForm()
-    g.remove_liked_message_form = RemoveLikedMessageForm()
+
 
 
 @app.before_request
 def get_liked_messages():
-    """If we're logged in, add curr user to Flask global."""
+    """If we're logged in, add current user liked messages to Flask global."""
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
         g.liked_message_ids = [message.id for message in g.user.liked_messages]
@@ -167,10 +165,13 @@ def list_users():
 @app.get('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-    delete_profile_form = DeleteProfileForm()
+  
     user = User.query.get_or_404(user_id)
+    number_of_likes= LikedMessage.query.filter(LikedMessage.user_id == user_id).count()
 
-    return render_template('users/show.html', user=user, delete_profile_form=delete_profile_form)
+    return render_template('users/show.html', 
+        user=user, 
+        number_of_likes=number_of_likes)
 
 
 @app.get('/users/<int:user_id>/following')
@@ -180,9 +181,8 @@ def show_following(user_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-    delete_profile_form = DeleteProfileForm()
     user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user, delete_profile_form=delete_profile_form)
+    return render_template('users/following.html', user=user)
 
 
 @app.get('/users/<int:user_id>/followers')
@@ -192,9 +192,9 @@ def users_followers(user_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-    delete_profile_form = DeleteProfileForm()
+    
     user = User.query.get_or_404(user_id)
-    return render_template('users/followers.html', user=user, delete_profile_form=delete_profile_form)
+    return render_template('users/followers.html', user=user)
 
 
 @app.post('/users/follow/<int:follow_id>')
@@ -263,7 +263,7 @@ def delete_user():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = DeleteProfileForm()
+    form = OnlyCsrfForm()
 
     if form.validate_on_submit:
         do_logout()
@@ -326,34 +326,46 @@ def messages_destroy(message_id):
     return redirect(f"/users/{g.user.id}")
 
 
-@app.post('/messages/<int:message_id>/add')
+@app.post('/messages/<int:message_id>/like')  
 def add_liked_message(message_id):
-    """add a message to user's liked list"""
+    """Add a message to user's liked list"""
     if g.user:
-        form = AddLikedMessageForm()
+        form = OnlyCsrfForm()
         if form.validate_on_submit:
-            liked_msg = LikedMessage(message_id=message_id, user_id=g.user.id)
-
-            db.session.add(liked_msg)
-            db.session.commit()
-            return redirect('/')
-
+            message = Message.query.get_or_404(message_id)
+            if message.user_id != g.user.id:
+                g.user.liked_messages.append(message)
+                
+                db.session.commit()
+                return redirect('/')
+    #flash message
     return redirect('/')
 
 
-@app.post('/messages/<int:message_id>/remove')
+@app.post('/messages/<int:message_id>/unlike')
 def remove_liked_message(message_id):
-    """remove a message from user's liked list"""
+    """Remove a message from user's liked list"""
     if g.user:
-        form = RemoveLikedMessageForm()
+        form = OnlyCsrfForm()
+    
         if form.validate_on_submit:
-            liked_msg = LikedMessage.query.filter(
-                LikedMessage.message_id == message_id and LikedMessage.user_id == g.user.id).one()
-            db.session.delete(liked_msg)
-            db.session.commit()
-            return redirect('/')
+            message = Message.query.get_or_404(message_id)
+            if message.user_id != g.user.id:
+                g.user.liked_messages.remove(message)
+                
+                db.session.commit()
+                return redirect('/')
 
     return redirect('/')
+
+@app.get("/users/<int:user_id>/likes")
+def render_likes(user_id):
+    """Renders a list of user's liked messages"""
+    user = User.query.get_or_404(user_id)
+    likes=user.liked_messages
+    return render_template("messages/likes.html", likes=likes, user=user)
+
+
 ##############################################################################
 # Homepage and error pages
 

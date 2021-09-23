@@ -29,19 +29,22 @@
             {% endif %}
             {% endif %}
           </div>
-          {% if message.id in g.liked_message_ids %}
-          <form action="/messages/{{message.id}}/remove" method="POST">
-            {{ g.add_liked_message_form.hidden_tag() }}
-            <button class='btn btn-light'><i class="fas fa-star"></i></button>
-          </form>
+          <div class="star">
+            {% if message.user_id != g.user.id %}
+              {% if message.id in g.liked_message_ids %}
+              <form action="/messages/{{message.id}}/unlike" method="POST">
+                {{ g.csrf_form.hidden_tag() }}
+                <button class='btn btn-light'><i class="fas fa-star"></i></button>
+              </form>
 
-          {% else%}
-          <form action="/messages/{{message.id}}/add" method="POST">
-            {{ g.remove_liked_message_form.hidden_tag() }}
-            <button class='btn btn-light'><i class="far fa-star"></i></button>
-          </form>
-
-          {% endif %}
+              {% else%}
+              <form action="/messages/{{message.id}}/like" method="POST">
+                {{ g.csrf_form.hidden_tag() }}
+                <button class='btn btn-light'><i class="far fa-star"></i></button>
+              </form>
+              {% endif %}
+            {% endif %}
+          </div>
           <p class="single-message">{{ message.text }}</p>
           <span class="text-muted">{{ message.timestamp.strftime('%d %B %Y') }}</span>
         </div>
