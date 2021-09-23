@@ -180,9 +180,9 @@ def show_following(user_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-
+    delete_profile_form = DeleteProfileForm()
     user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user)
+    return render_template('users/following.html', user=user, delete_profile_form=delete_profile_form)
 
 
 @app.get('/users/<int:user_id>/followers')
@@ -192,9 +192,9 @@ def users_followers(user_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-
+    delete_profile_form = DeleteProfileForm()
     user = User.query.get_or_404(user_id)
-    return render_template('users/followers.html', user=user)
+    return render_template('users/followers.html', user=user, delete_profile_form=delete_profile_form)
 
 
 @app.post('/users/follow/<int:follow_id>')
