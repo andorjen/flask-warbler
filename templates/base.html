@@ -54,22 +54,8 @@
 
         <li>
           <form id="user-logout-form" action="/logout" method="POST">
-            {{ form.hidden_tag() }}
-            <!--add type=hidden form fields -->
+            {{ g.csrf_form.hidden_tag() }}
 
-            {% for field in form
-            if field.widget.input_type != 'hidden' %}
-
-            <p>
-              {{ field.label }}
-              {{ field }}
-
-              {% for error in field.errors %}
-              {{ error }}
-              {% endfor %}
-            </p>
-
-            {% endfor %}
             <button>Logout</button>
           </form>
         </li>

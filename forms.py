@@ -29,16 +29,24 @@ class OnlyCsrfForm(FlaskForm):
     """Used to add CSRF protection to logout user"""
 
 
+class DeleteProfileForm(FlaskForm):
+    """Used to add CSRF protection to delete user"""
+
+
 class UpdateUserForm(FlaskForm):
     """Form for updating user"""
 
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('E-mail', validators=[DataRequired(), Email()])
     image_url = StringField('(Optional) Image URL')
-    header_image_url = StringField('(Optional) Image URL')
+    header_image_url = StringField('(Optional) Header Image URL')
     bio = StringField('(Optional) Bio')
     password = PasswordField('Password')
 
 
+class AddLikedMessageForm(FlaskForm):
+    """Form to add liked message"""
 
-UserLogoutForm = OnlyCsrfForm
+
+class RemoveLikedMessageForm(FlaskForm):
+    """Form to remove liked message"""

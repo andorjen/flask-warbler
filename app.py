@@ -2,10 +2,11 @@ import os
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
+from flask_wtf import form
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm, UserLogoutForm, UpdateUserForm
-from models import db, connect_db, User, Message
+from forms import DeleteProfileForm, OnlyCsrfForm, UserAddForm, LoginForm, MessageForm, UpdateUserForm, AddLikedMessageForm, RemoveLikedMessageForm
+from models import db, connect_db, User, Message, LikedMessage
 
 import dotenv
 dotenv.load_dotenv()
@@ -19,13 +20,13 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-# app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
 
-
+db.create_all()
 ##############################################################################
 # User signup/login/logout
 
@@ -39,6 +40,23 @@ def add_user_to_g():
 
     else:
         g.user = None
+
+
+@app.before_request
+def add_csrf_form():
+    """If we're logged in, add curr user to Flask global."""
+
+    g.csrf_form = OnlyCsrfForm()
+    g.add_liked_message_form = AddLikedMessageForm()
+    g.remove_liked_message_form = RemoveLikedMessageForm()
+
+
+@app.before_request
+def get_liked_messages():
+    """If we're logged in, add curr user to Flask global."""
+    if CURR_USER_KEY in session:
+        g.user = User.query.get(session[CURR_USER_KEY])
+        g.liked_message_ids = [message.id for message in g.user.liked_messages]
 
 
 def do_login(user):
@@ -114,13 +132,15 @@ def login():
 def logout():
     """Handle logout of user."""
 
-    form = UserLogoutForm()
+    form = g.csrf_form
 
     if form.validate_on_submit():
-        session.pop(CURR_USER_KEY, None)
+        do_logout()
+
         flash('Successfully logged out!')
         return redirect('/login')
 
+    flash('Unauthorized action!')
     return redirect('/')
 
 ##############################################################################
@@ -141,16 +161,16 @@ def list_users():
     else:
         users = User.query.filter(User.username.like(f"%{search}%")).all()
 
-    return render_template('users/index.html', users=users, form=UserLogoutForm())
+    return render_template('users/index.html', users=users)
 
 
 @app.get('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-
+    delete_profile_form = DeleteProfileForm()
     user = User.query.get_or_404(user_id)
 
-    return render_template('users/show.html', user=user, form=UserLogoutForm())
+    return render_template('users/show.html', user=user, delete_profile_form=delete_profile_form)
 
 
 @app.get('/users/<int:user_id>/following')
@@ -162,7 +182,7 @@ def show_following(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user, form=UserLogoutForm())
+    return render_template('users/following.html', user=user)
 
 
 @app.get('/users/<int:user_id>/followers')
@@ -174,7 +194,7 @@ def users_followers(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/followers.html', user=user, form=UserLogoutForm())
+    return render_template('users/followers.html', user=user)
 
 
 @app.post('/users/follow/<int:follow_id>')
@@ -208,21 +228,23 @@ def stop_following(follow_id):
 
 
 @app.route('/users/profile', methods=["GET", "POST"])
-def profile():
+def edit_user_profile():
     """Update profile for current user."""
+    if not g.user:
+        return redirect("/")
 
-    update_form = UpdateUserForm()
+    form = UpdateUserForm(obj=g.user)
 
-    if update_form.validate_on_submit():
-        
+    if form.validate_on_submit():
+
         user = User.authenticate(g.user.username,
-                                 update_form.password.data)
+                                 form.password.data)
         if user:
-            user.username = update_form.username.data
-            user.email=update_form.email.data
-            user.image_url=update_form.image_url.data or User.image_url.default.arg
-            user.header_image_url=update_form.header_image_url.data 
-            user.bio= update_form.bio.data
+            user.username = form.username.data
+            user.email = form.email.data
+            user.image_url = form.image_url.data or User.image_url.default.arg
+            user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg
+            user.bio = form.bio.data
 
             db.session.commit()
             return redirect(f"/users/{g.user.id}")
@@ -230,28 +252,33 @@ def profile():
         flash("Invalid credentials to edit user")
         return redirect("/")
 
-    return render_template("users/edit.html", update_form=update_form, form=UserLogoutForm())
-    
+    else:
+        return render_template("users/edit.html", form=form)
 
 
 @app.post('/users/delete')
 def delete_user():
     """Delete user."""
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    do_logout()
+    form = DeleteProfileForm()
 
-    db.session.delete(g.user)
-    db.session.commit()
+    if form.validate_on_submit:
+        do_logout()
 
-    return redirect("/signup")
+        db.session.delete(g.user)
+        db.session.commit()
 
+        return redirect("/signup")
+    else:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
 
 ##############################################################################
 # Messages routes:
+
 
 @app.route('/messages/new', methods=["GET", "POST"])
 def messages_add():
@@ -273,7 +300,7 @@ def messages_add():
 
         return redirect(f"/users/{g.user.id}")
 
-    return render_template('messages/new.html', message_form=form, form=UserLogoutForm())
+    return render_template('messages/new.html', form=form)
 
 
 @app.get('/messages/<int:message_id>')
@@ -281,7 +308,7 @@ def messages_show(message_id):
     """Show a message."""
 
     msg = Message.query.get(message_id)
-    return render_template('messages/show.html', message=msg, form=UserLogoutForm())
+    return render_template('messages/show.html', message=msg)
 
 
 @app.post('/messages/<int:message_id>/delete')
@@ -299,6 +326,34 @@ def messages_destroy(message_id):
     return redirect(f"/users/{g.user.id}")
 
 
+@app.post('/messages/<int:message_id>/add')
+def add_liked_message(message_id):
+    """add a message to user's liked list"""
+    if g.user:
+        form = AddLikedMessageForm()
+        if form.validate_on_submit:
+            liked_msg = LikedMessage(message_id=message_id, user_id=g.user.id)
+
+            db.session.add(liked_msg)
+            db.session.commit()
+            return redirect('/')
+
+    return redirect('/')
+
+
+@app.post('/messages/<int:message_id>/remove')
+def remove_liked_message(message_id):
+    """remove a message from user's liked list"""
+    if g.user:
+        form = RemoveLikedMessageForm()
+        if form.validate_on_submit:
+            liked_msg = LikedMessage.query.filter(
+                LikedMessage.message_id == message_id and LikedMessage.user_id == g.user.id).one()
+            db.session.delete(liked_msg)
+            db.session.commit()
+            return redirect('/')
+
+    return redirect('/')
 ##############################################################################
 # Homepage and error pages
 
@@ -312,17 +367,17 @@ def homepage():
     """
 
     if g.user:
-        following_ids = [user.id for user in g.user.following]
+
+        self_and_following_ids = [user.id for user in g.user.following]
+        self_and_following_ids.append(g.user.id)
+
         messages = (Message
                     .query
-                    .filter(Message.user_id.in_(following_ids))
+                    .filter(Message.user_id.in_(self_and_following_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
-
-        
-
-        return render_template('home.html', messages=messages, form=UserLogoutForm())
+        return render_template('home.html', messages=messages)
 
     else:
         return render_template('home-anon.html')

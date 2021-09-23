@@ -72,7 +72,15 @@ class User(db.Model):
         nullable=False,
     )
 
-    messages = db.relationship('Message', order_by='Message.timestamp.desc()')
+    messages = db.relationship(
+        'Message',
+        order_by='Message.timestamp.desc()')
+
+    liked_messages = db.relationship(
+        'Message',
+        secondary="liked_messages",
+        backref="liked_users",
+        order_by='LikedMessage.timestamp.desc()')
 
     followers = db.relationship(
         "User",
@@ -173,6 +181,30 @@ class Message(db.Model):
     )
 
     user = db.relationship('User')
+
+
+class LikedMessage(db.Model):
+    """An individual message ("warble")."""
+
+    __tablename__ = 'liked_messages'
+
+    message_id = db.Column(
+        db.Integer,
+        db.ForeignKey('messages.id', ondelete="cascade"),
+        primary_key=True
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="cascade"),
+        primary_key=True
+    )
+
+    timestamp = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
 
 
 def connect_db(app):
