@@ -5,7 +5,7 @@
 #    python -m unittest test_user_model.py
 
 
-from app import app
+
 import os
 from unittest import TestCase
 
@@ -20,7 +20,7 @@ from sqlalchemy import exc
 os.environ['DATABASE_URL'] = "postgresql:///warbler_test"
 
 # Now we can import app
-
+from app import app
 
 # Create our tables (we do this here, so we only create the tables
 # once for all tests --- in each test, we'll delete the data
@@ -56,9 +56,10 @@ class UserModelTestCase(TestCase):
     def setUp(self):
         """Create test client, add sample data."""
 
-        User.query.delete()
+
         Message.query.delete()
         Follows.query.delete()
+        User.query.delete()
 
         self.client = app.test_client()
 
@@ -100,7 +101,7 @@ class UserModelTestCase(TestCase):
         """test for if user is following test_user"""
 
         self.test_user.following.append(self.test_user2)
-        resp = self.test_user.is_following(self.test_user2)
+        resp = self.test_user.is_following(self.test_user2) #check length of test_user2.followers
         self.assertEqual(True, resp)
 
     def test_user_is_not_following(self):
@@ -124,7 +125,7 @@ class UserModelTestCase(TestCase):
 
     def test_user_signup(self):
         """test if a new user is successfully created when given valid credentials"""
-        new_user = User.signup(**TEST_USER_DATA3)
+        new_user = User.signup(**TEST_USER_DATA3)   # add db.session.commit(), check table for data
         self.assertTrue(new_user)
 
     def test_user_fail_signup(self):
@@ -138,11 +139,11 @@ class UserModelTestCase(TestCase):
     def test_user_authenticate(self):
         """test if authenticate user successes when given valid credentials"""
 
-        resp = User.authenticate("testuser2", "HASHED_PASSWORD2")
+        resp = User.authenticate("testuser2", "HASHED_PASSWORD2")   #check different types of errors, eg. taken username, invalid length of data
         self.assertTrue(resp)
 
     def test_user_fail_authenticate(self):
         """test if authenticate user fails when given invalid credentials"""
 
-        resp = User.authenticate("testuser2", "HASHED_PASSWORDNOTTHIS")
+        resp = User.authenticate("testuser2", "HASHED_PASSWORDNOTTHIS")  #username invalid, password invalid, seperated test
         self.assertFalse(resp)

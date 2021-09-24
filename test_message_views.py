@@ -75,23 +75,27 @@ class MessageViewTestCase(TestCase):
     def test_add_message(self):
         """Can use add a message?"""
 
-        # Since we need to change the session to mimic logging in,
-        # we need to use the changing-session trick:
-
         with self.client as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.testuser.id
 
-            # Now, that session setting is saved, so we can have
-            # the rest of ours test
-
             resp = c.post("/messages/new", data={"text": "Hello"})
 
-            # Make sure it redirects
             self.assertEqual(resp.status_code, 302)
 
             msg = Message.query.filter(Message.text=="Hello").one()
             self.assertEqual(msg.text, "Hello")
+
+    def test_fail_add_message(self):
+        """Can use add a message if not logged in"""
+
+        with self.client as c:
+                
+            resp = c.post("/messages/new", data={"text": "Hello"}, follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
 
     def test_show_message_form(self):
         """Can we see message form"""
@@ -135,6 +139,18 @@ class MessageViewTestCase(TestCase):
             self.assertIsNone(msg)
 
 
+    def test_fail_destroy_message(self):
+        """Can we remove a message if not logged in"""
+
+        with self.client as c:
+
+            resp = c.post(f"/messages/{self.test_message_id}/delete",
+                        follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
     def test_add_liked_message(self):
         """Can we add a liked message?"""
 
@@ -148,6 +164,17 @@ class MessageViewTestCase(TestCase):
 
             msg = LikedMessage.query.one()
             self.assertEqual(self.test_message_id2, msg.message_id)
+
+    def test_fail_add_liked_message(self):
+        """Can we add a liked message if not logged in"""
+
+        with self.client as c:
+            resp = c.post(f"/messages/{self.test_message_id2}/like",
+                            follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
 
     def test_remove_liked_message(self):
         """Can we remove a liked message?"""
@@ -167,6 +194,17 @@ class MessageViewTestCase(TestCase):
             msg = LikedMessage.query.one_or_none()
             self.assertIsNone(msg)
 
+    def test_fail_remove_liked_message(self):
+        """Can we remove a liked message if not logged in"""
+
+        with self.client as c:
+            resp = c.post(f"/messages/{self.test_message_id2}/unlike",
+                            follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+            
     def test_show_liked_message(self):
         """Can we see users liked messages?"""
         

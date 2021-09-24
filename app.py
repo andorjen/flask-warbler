@@ -339,7 +339,7 @@ def add_liked_message(message_id):
 
                 db.session.commit()
                 return redirect('/')
-    # flash message
+    flash("Access unauthorized.", "danger")
     return redirect('/')
 
 
@@ -356,7 +356,8 @@ def remove_liked_message(message_id):
 
                 db.session.commit()
                 return redirect('/')
-
+                
+    flash("Access unauthorized.", "danger")
     return redirect('/')
 
 

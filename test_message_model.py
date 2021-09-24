@@ -5,7 +5,7 @@
 #    python -m unittest test_user_model.py
 
 
-from app import app
+
 import os
 from unittest import TestCase
 
@@ -20,7 +20,7 @@ from models import db, User, Message
 os.environ['DATABASE_URL'] = "postgresql:///warbler_test"
 
 # Now we can import app
-
+from app import app
 
 # Create our tables (we do this here, so we only create the tables
 # once for all tests --- in each test, we'll delete the data
@@ -83,7 +83,7 @@ class MessageModelTestCase(TestCase):
         self.assertEqual(self.test_message.user_id, self.test_user.id)
         self.assertEqual(self.test_message2.user_id, self.test_user2.id)
 
-    def test_user_model(self):
+    def test_message_model(self):
         """Does basic model work?"""
 
         m = Message(
@@ -101,7 +101,7 @@ class MessageModelTestCase(TestCase):
         self.test_user.liked_messages.append(self.test_message2)
         db.session.commit()
 
-        self.assertIn(self.test_message2, self.test_user.liked_messages)
+        self.assertIn(self.test_message2, self.test_user.liked_messages)  #test database directly
 
     def test_not_like_messages(self):
         """ Test for if message is not liked by user"""
