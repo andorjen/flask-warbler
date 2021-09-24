@@ -48,12 +48,12 @@ def add_forms():
     g.csrf_form = OnlyCsrfForm()
 
 
-
 @app.before_request
 def get_liked_messages():
     """If we're logged in, add current user liked messages to Flask global."""
-    if CURR_USER_KEY in session:
-        g.user = User.query.get(session[CURR_USER_KEY])
+    # if CURR_USER_KEY in session:
+    #     g.user = User.query.get(session[CURR_USER_KEY])
+    if g.user:
         g.liked_message_ids = [message.id for message in g.user.liked_messages]
 
 
@@ -165,13 +165,14 @@ def list_users():
 @app.get('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-  
-    user = User.query.get_or_404(user_id)
-    number_of_likes= LikedMessage.query.filter(LikedMessage.user_id == user_id).count()
 
-    return render_template('users/show.html', 
-        user=user, 
-        number_of_likes=number_of_likes)
+    user = User.query.get_or_404(user_id)
+    number_of_likes = LikedMessage.query.filter(
+        LikedMessage.user_id == user_id).count()
+
+    return render_template('users/show.html',
+                           user=user,
+                           number_of_likes=number_of_likes)
 
 
 @app.get('/users/<int:user_id>/following')
@@ -192,7 +193,7 @@ def users_followers(user_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-    
+
     user = User.query.get_or_404(user_id)
     return render_template('users/followers.html', user=user)
 
@@ -326,7 +327,7 @@ def messages_destroy(message_id):
     return redirect(f"/users/{g.user.id}")
 
 
-@app.post('/messages/<int:message_id>/like')  
+@app.post('/messages/<int:message_id>/like')
 def add_liked_message(message_id):
     """Add a message to user's liked list"""
     if g.user:
@@ -335,10 +336,10 @@ def add_liked_message(message_id):
             message = Message.query.get_or_404(message_id)
             if message.user_id != g.user.id:
                 g.user.liked_messages.append(message)
-                
+
                 db.session.commit()
                 return redirect('/')
-    #flash message
+    # flash message
     return redirect('/')
 
 
@@ -347,22 +348,23 @@ def remove_liked_message(message_id):
     """Remove a message from user's liked list"""
     if g.user:
         form = OnlyCsrfForm()
-    
+
         if form.validate_on_submit:
             message = Message.query.get_or_404(message_id)
             if message.user_id != g.user.id:
                 g.user.liked_messages.remove(message)
-                
+
                 db.session.commit()
                 return redirect('/')
 
     return redirect('/')
 
+
 @app.get("/users/<int:user_id>/likes")
 def render_likes(user_id):
     """Renders a list of user's liked messages"""
     user = User.query.get_or_404(user_id)
-    likes=user.liked_messages
+    likes = user.liked_messages
     return render_template("messages/likes.html", likes=likes, user=user)
 
 
