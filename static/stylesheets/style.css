@@ -196,6 +196,10 @@ nav + .container {
   margin-left: 10px;
 }
 
+.msg-text {
+  word-break: break-all;
+}
+
 #warbler-hero {
   height: 360px;
   margin-top: -16px;

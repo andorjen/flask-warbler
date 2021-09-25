@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired, Email, Length
 class MessageForm(FlaskForm):
     """Form for adding/editing messages."""
 
-    text = TextAreaField('text', validators=[DataRequired()])
+    text = TextAreaField('text', validators=[DataRequired(), Length(max=140)])
 
 
 class UserAddForm(FlaskForm):
@@ -29,7 +29,6 @@ class OnlyCsrfForm(FlaskForm):
     """Used to add CSRF protection to forms"""
 
 
-
 class UpdateUserForm(FlaskForm):
     """Form for updating user"""
 
@@ -39,8 +38,6 @@ class UpdateUserForm(FlaskForm):
     header_image_url = StringField('(Optional) Header Image URL')
     bio = StringField('(Optional) Bio')
     password = PasswordField('Password')
-
-
 
 
 # make just one form
