@@ -14,8 +14,6 @@ CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
 
-# Get DB_URI from environ variable (useful for production/testing) or,
-# if not set there, use development local db.
 app.config['SQLALCHEMY_DATABASE_URI'] = (
     os.environ['DATABASE_URL'].replace("postgres://", "postgresql://"))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -25,8 +23,8 @@ app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
-
 db.create_all()
+
 ##############################################################################
 # User signup/login/logout
 
@@ -357,7 +355,7 @@ def remove_liked_message(message_id):
 
                 db.session.commit()
                 return redirect('/')
-                
+
     flash("Access unauthorized.", "danger")
     return redirect('/')
 

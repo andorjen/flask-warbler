@@ -1,30 +1,13 @@
 """User model tests."""
 
-# run these tests like:
-#
-#    python -m unittest test_user_model.py
-
-
-
+from app import app
 import os
 from unittest import TestCase
-
 from models import db, User, Message, Follows
 from sqlalchemy import exc
 
-# BEFORE we import our app, let's set an environmental variable
-# to use a different database for tests (we need to do this
-# before we import our app, since that will have already
-# connected to the database
 
 os.environ['DATABASE_URL'] = "postgresql:///warbler_test"
-
-# Now we can import app
-from app import app
-
-# Create our tables (we do this here, so we only create the tables
-# once for all tests --- in each test, we'll delete the data
-# and create fresh new clean test data
 
 db.create_all()
 
@@ -56,7 +39,6 @@ class UserModelTestCase(TestCase):
     def setUp(self):
         """Create test client, add sample data."""
 
-
         Message.query.delete()
         Follows.query.delete()
         User.query.delete()
@@ -86,7 +68,6 @@ class UserModelTestCase(TestCase):
         db.session.add(u)
         db.session.commit()
 
-        # User should have no messages & no followers
         self.assertEqual(len(u.messages), 0)
         self.assertEqual(len(u.followers), 0)
 
@@ -101,13 +82,16 @@ class UserModelTestCase(TestCase):
         """test for if user is following test_user"""
 
         self.test_user.following.append(self.test_user2)
-        resp = self.test_user.is_following(self.test_user2) #check length of test_user2.followers
+        resp = self.test_user.is_following(self.test_user2)
+
         self.assertEqual(True, resp)
+        self.assertEqual(len(self.test_user2.followers), 1)
 
     def test_user_is_not_following(self):
         """test for if user is not following test_user"""
 
         resp = self.test_user.is_following(self.test_user2)
+
         self.assertEqual(False, resp)
 
     def test_user_is_followed_by(self):
@@ -115,6 +99,7 @@ class UserModelTestCase(TestCase):
 
         self.test_user.followers.append(self.test_user2)
         resp = self.test_user.is_followed_by(self.test_user2)
+
         self.assertEqual(True, resp)
 
     def test_user_is_not_followed_by(self):
@@ -125,8 +110,14 @@ class UserModelTestCase(TestCase):
 
     def test_user_signup(self):
         """test if a new user is successfully created when given valid credentials"""
-        new_user = User.signup(**TEST_USER_DATA3)   # add db.session.commit(), check table for data
+
+        new_user = User.signup(
+            **TEST_USER_DATA3)
+        db.session.commit()
+        resp = User.query.all()
+
         self.assertTrue(new_user)
+        self.assertEqual(len(resp), 3)
 
     def test_user_fail_signup(self):
         """test if a user creation fails when given invalid credentials"""
@@ -139,11 +130,11 @@ class UserModelTestCase(TestCase):
     def test_user_authenticate(self):
         """test if authenticate user successes when given valid credentials"""
 
-        resp = User.authenticate("testuser2", "HASHED_PASSWORD2")   #check different types of errors, eg. taken username, invalid length of data
+        resp = User.authenticate("testuser2", "HASHED_PASSWORD2")
         self.assertTrue(resp)
 
     def test_user_fail_authenticate(self):
         """test if authenticate user fails when given invalid credentials"""
 
-        resp = User.authenticate("testuser2", "HASHED_PASSWORDNOTTHIS")  #username invalid, password invalid, seperated test
+        resp = User.authenticate("testuser2", "HASHED_PASSWORDNOTTHIS")
         self.assertFalse(resp)
